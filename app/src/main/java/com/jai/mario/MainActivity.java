@@ -3,64 +3,61 @@ package com.jai.mario;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.widget.Button;
 import android.widget.SeekBar;
-import android.widget.VideoView;
-import android.widget.MediaController;
+
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+
+import org.videolan.libvlc.LibVLC;
+import org.videolan.libvlc.Media;
+import org.videolan.libvlc.MediaPlayer;
+import org.videolan.libvlc.util.VLCVideoLayout;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_PICK_VIDEO = 1;
 
-    private VideoView videoView;
-    private Button btnSelect, btnPlay, btnPause;
+    private VLCVideoLayout videoLayout;
+    private MediaPlayer mediaPlayer;
+    private LibVLC libVLC;
+
+    private Button btnSelect, btnPlay, btnPause, btnSwitchAudio;
     private SeekBar seekBar;
-    private Handler handler = new Handler();
-    private Runnable updateSeekBar;
+
+    private List<MediaPlayer.TrackDescription> audioTracks = new ArrayList<>();
+    private int currentAudioTrackIndex = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        videoView = findViewById(R.id.videoView);
+        videoLayout = findViewById(R.id.videoView);
         btnSelect = findViewById(R.id.btnSelect);
         btnPlay = findViewById(R.id.btnPlay);
         btnPause = findViewById(R.id.btnPause);
+        btnSwitchAudio = findViewById(R.id.btnSwitchAudio);
         seekBar = findViewById(R.id.seekBar);
 
-        videoView.setMediaController(new MediaController(this));
+        libVLC = new LibVLC(this, new ArrayList<>());
+        mediaPlayer = new MediaPlayer(libVLC);
+        mediaPlayer.attachViews(videoLayout, null, false, false);
 
         btnSelect.setOnClickListener(v -> selectVideoFromStorage());
 
-        btnPlay.setOnClickListener(v -> {
-            videoView.start();
-            updateSeekBar();
-        });
+        btnPlay.setOnClickListener(v -> mediaPlayer.play());
 
-        btnPause.setOnClickListener(v -> videoView.pause());
+        btnPause.setOnClickListener(v -> mediaPlayer.pause());
 
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            boolean userSeeking = false;
-
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (userSeeking) {
-                    videoView.seekTo(progress);
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                userSeeking = true;
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                userSeeking = false;
+        btnSwitchAudio.setOnClickListener(v -> {
+            if (audioTracks.size() > 1) {
+                currentAudioTrackIndex = (currentAudioTrackIndex + 1) % audioTracks.size();
+                int trackId = audioTracks.get(currentAudioTrackIndex).id;
+                mediaPlayer.setAudioTrack(trackId);
             }
         });
     }
@@ -77,32 +74,42 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == REQUEST_CODE_PICK_VIDEO && resultCode == RESULT_OK && data != null) {
             Uri videoUri = data.getData();
-            videoView.setVideoURI(videoUri);
-            videoView.setOnPreparedListener(mp -> {
-                seekBar.setMax(videoView.getDuration());
-                videoView.seekTo(1);  // show preview frame
-            });
+            playVideo(videoUri);
         }
     }
 
-    private void updateSeekBar() {
-        updateSeekBar = new Runnable() {
-            @Override
-            public void run() {
-                if (videoView != null && videoView.isPlaying()) {
-                    seekBar.setProgress(videoView.getCurrentPosition());
-                    handler.postDelayed(this, 500);
-                }
+    private void playVideo(Uri uri) {
+        if (mediaPlayer.isPlaying()) {
+            mediaPlayer.stop();
+        }
+
+        Media media = new Media(libVLC, uri);
+        mediaPlayer.setMedia(media);
+        media.release();
+        mediaPlayer.play();
+
+        mediaPlayer.setEventListener(event -> {
+            if (event.type == MediaPlayer.Event.MediaChanged || event.type == MediaPlayer.Event.Playing) {
+                audioTracks = mediaPlayer.getAudioTracks();
+                currentAudioTrackIndex = getCurrentAudioTrackIndex();
             }
-        };
-        handler.postDelayed(updateSeekBar, 0);
+        });
+    }
+
+    private int getCurrentAudioTrackIndex() {
+        int currentId = mediaPlayer.getAudioTrack();
+        for (int i = 0; i < audioTracks.size(); i++) {
+            if (audioTracks.get(i).id == currentId) return i;
+        }
+        return 0;
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (updateSeekBar != null) {
-            handler.removeCallbacks(updateSeekBar);
-        }
+        mediaPlayer.stop();
+        mediaPlayer.detachViews();
+        mediaPlayer.release();
+        libVLC.release();
     }
 }
