@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.SeekBar;
 
@@ -13,8 +14,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
-import org.videolan.libvlc.MediaPlayer.Event;
-import org.videolan.libvlc.MediaPlayer.TrackDescription;
 import org.videolan.libvlc.util.VLCVideoLayout;
 
 import java.util.ArrayList;
@@ -32,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnSelect, btnPlay, btnPause, btnSwitchAudio;
     private SeekBar seekBar;
 
-    private List<TrackDescription> audioTracks = new ArrayList<>();
+    private List<MediaPlayer.TrackDescription> audioTracks = new ArrayList<>();
     private int currentAudioTrackIndex = 0;
 
     private Handler handler = new Handler();
@@ -94,9 +93,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void selectVideoFromStorage() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("video/*");
-        startActivityForResult(Intent.createChooser(intent, "Select Video"), REQUEST_CODE_PICK_VIDEO);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(intent, REQUEST_CODE_PICK_VIDEO);
     }
 
     @Override
@@ -104,8 +104,13 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == REQUEST_CODE_PICK_VIDEO && resultCode == RESULT_OK && data != null) {
-            Uri videoUri = data.getData();
-            playVideo(videoUri);
+            Uri uri = data.getData();
+            try {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } catch (Exception e) {
+                Log.w("MainActivity", "Could not persist URI permission", e);
+            }
+            playVideo(uri);
         }
     }
 
@@ -115,11 +120,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Media media = new Media(libVLC, uri);
+        media.addOption(":no-drop-late-frames");
+        media.addOption(":no-skip-frames");
+
         mediaPlayer.setMedia(media);
         media.release();
 
         mediaPlayer.setEventListener(event -> {
-            if (event.type == Event.Playing) {
+            if (event.type == MediaPlayer.Event.Playing) {
                 audioTracks = Arrays.asList(mediaPlayer.getAudioTracks());
                 currentAudioTrackIndex = getCurrentAudioTrackIndex();
 
