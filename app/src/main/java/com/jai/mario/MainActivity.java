@@ -80,8 +80,7 @@ public class MainActivity extends AppCompatActivity {
                         currentAudioTrackIndex = getCurrentAudioTrackIndex();
                         break;
                     case MediaPlayer.Event.EncounteredError:
-                    case MediaPlayer.Event.Error:
-                        Log.e("VLC", "Playback error occurred.");
+                        Log.e("VLC", "Playback encountered an error!");
                         break;
                     case MediaPlayer.Event.Stopped:
                         Log.d("VLC", "Playback stopped.");

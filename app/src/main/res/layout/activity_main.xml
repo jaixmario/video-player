@@ -1,32 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:layout_height="match_parent">
 
-    <!-- URL Input -->
     <EditText
         android:id="@+id/edtUrl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter MKV or stream URL"
-        android:layout_margin="16dp"
-        android:inputType="textUri" />
+        android:hint="Enter MKV URL"
+        android:inputType="textUri"
+        android:layout_margin="16dp" />
 
-    <!-- Play Button -->
     <Button
         android:id="@+id/btnPlay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Play"
         android:layout_below="@id/edtUrl"
-        android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
-        android:layout_alignParentStart="true" />
+        android:layout_marginTop="8dp" />
 
-    <!-- Switch Audio Track -->
     <Button
         android:id="@+id/btnSwitchAudio"
         android:layout_width="wrap_content"
@@ -37,7 +30,6 @@
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp" />
 
-    <!-- VLC Video Layout -->
     <org.videolan.libvlc.util.VLCVideoLayout
         android:id="@+id/videoView"
         android:layout_width="match_parent"
