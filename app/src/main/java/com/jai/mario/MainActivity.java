@@ -3,123 +3,106 @@ package com.jai.mario;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.Handler;
 import android.widget.Button;
-
+import android.widget.SeekBar;
+import android.widget.VideoView;
+import android.widget.MediaController;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-
-import org.videolan.libvlc.LibVLC;
-import org.videolan.libvlc.Media;
-import org.videolan.libvlc.MediaPlayer;
-import org.videolan.libvlc.MediaPlayer.TrackDescription;
-import org.videolan.libvlc.util.VLCVideoLayout;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_PICK_VIDEO = 1;
 
-    private VLCVideoLayout videoLayout;
-    private LibVLC libVLC;
-    private MediaPlayer mediaPlayer;
-
-    private Button btnSelectFile, btnSwitchAudio;
-    private List<TrackDescription> audioTracks = new ArrayList<>();
-    private int currentAudioTrackIndex = 0;
+    private VideoView videoView;
+    private Button btnSelect, btnPlay, btnPause;
+    private SeekBar seekBar;
+    private Handler handler = new Handler();
+    private Runnable updateSeekBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        videoLayout = findViewById(R.id.videoView);
-        btnSelectFile = findViewById(R.id.btnSelectFile);
-        btnSwitchAudio = findViewById(R.id.btnSwitchAudio);
+        videoView = findViewById(R.id.videoView);
+        btnSelect = findViewById(R.id.btnSelect);
+        btnPlay = findViewById(R.id.btnPlay);
+        btnPause = findViewById(R.id.btnPause);
+        seekBar = findViewById(R.id.seekBar);
 
-        libVLC = new LibVLC(this, new ArrayList<>());
-        mediaPlayer = new MediaPlayer(libVLC);
-        mediaPlayer.attachViews(videoLayout, null, false, false);
+        videoView.setMediaController(new MediaController(this));
 
-        btnSelectFile.setOnClickListener(v -> openFilePicker());
+        btnSelect.setOnClickListener(v -> selectVideoFromStorage());
 
-        btnSwitchAudio.setOnClickListener(v -> {
-            if (audioTracks.size() > 1) {
-                currentAudioTrackIndex = (currentAudioTrackIndex + 1) % audioTracks.size();
-                int trackId = audioTracks.get(currentAudioTrackIndex).id;
-                mediaPlayer.setAudioTrack(trackId);
-                Log.d("VLC", "Switched to audio track: " + trackId);
+        btnPlay.setOnClickListener(v -> {
+            videoView.start();
+            updateSeekBar();
+        });
+
+        btnPause.setOnClickListener(v -> videoView.pause());
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            boolean userSeeking = false;
+
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (userSeeking) {
+                    videoView.seekTo(progress);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                userSeeking = true;
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                userSeeking = false;
             }
         });
     }
 
-    private void openFilePicker() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+    private void selectVideoFromStorage() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("video/*");
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-        startActivityForResult(intent, REQUEST_CODE_PICK_VIDEO);
+        startActivityForResult(Intent.createChooser(intent, "Select Video"), REQUEST_CODE_PICK_VIDEO);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
         if (requestCode == REQUEST_CODE_PICK_VIDEO && resultCode == RESULT_OK && data != null) {
-            Uri uri = data.getData();
-            try {
-                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            } catch (Exception e) {
-                Log.w("MainActivity", "Persist permission failed", e);
-            }
-            playVideo(uri);
+            Uri videoUri = data.getData();
+            videoView.setVideoURI(videoUri);
+            videoView.setOnPreparedListener(mp -> {
+                seekBar.setMax(videoView.getDuration());
+                videoView.seekTo(1);  // show preview frame
+            });
         }
     }
 
-    private void playVideo(Uri uri) {
-        if (mediaPlayer.isPlaying()) {
-            mediaPlayer.stop();
-        }
-
-        Media media = new Media(libVLC, uri);
-        media.addOption(":no-drop-late-frames");
-        media.addOption(":no-skip-frames");
-
-        mediaPlayer.setMedia(media);
-        media.release();
-
-        mediaPlayer.setEventListener(event -> {
-            if (event.type == MediaPlayer.Event.Playing) {
-                TrackDescription[] tracks = mediaPlayer.getAudioTracks();
-                if (tracks != null) {
-                    audioTracks = Arrays.asList(tracks);
-                    currentAudioTrackIndex = getCurrentAudioTrackIndex();
-                    Log.d("VLC", "Audio track count: " + audioTracks.size());
+    private void updateSeekBar() {
+        updateSeekBar = new Runnable() {
+            @Override
+            public void run() {
+                if (videoView != null && videoView.isPlaying()) {
+                    seekBar.setProgress(videoView.getCurrentPosition());
+                    handler.postDelayed(this, 500);
                 }
-            } else if (event.type == MediaPlayer.Event.EncounteredError) {
-                Log.e("VLC", "Playback error!");
             }
-        });
-
-        mediaPlayer.play();
-    }
-
-    private int getCurrentAudioTrackIndex() {
-        int currentId = mediaPlayer.getAudioTrack();
-        for (int i = 0; i < audioTracks.size(); i++) {
-            if (audioTracks.get(i).id == currentId) return i;
-        }
-        return 0;
+        };
+        handler.postDelayed(updateSeekBar, 0);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mediaPlayer.stop();
-        mediaPlayer.detachViews();
-        mediaPlayer.release();
-        libVLC.release();
+        if (updateSeekBar != null) {
+            handler.removeCallbacks(updateSeekBar);
+        }
     }
 }
