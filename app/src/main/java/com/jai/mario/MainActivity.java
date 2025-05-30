@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
+import org.videolan.libvlc.MediaPlayer.TrackDescription;
 import org.videolan.libvlc.util.VLCVideoLayout;
 
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer mediaPlayer;
 
     private Button btnSelectFile, btnSwitchAudio;
-    private List<MediaPlayer.TrackDescription> audioTracks = new ArrayList<>();
+    private List<TrackDescription> audioTracks = new ArrayList<>();
     private int currentAudioTrackIndex = 0;
 
     @Override
@@ -50,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
                 currentAudioTrackIndex = (currentAudioTrackIndex + 1) % audioTracks.size();
                 int trackId = audioTracks.get(currentAudioTrackIndex).id;
                 mediaPlayer.setAudioTrack(trackId);
+                Log.d("VLC", "Switched to audio track: " + trackId);
             }
         });
     }
@@ -84,17 +86,20 @@ public class MainActivity extends AppCompatActivity {
         Media media = new Media(libVLC, uri);
         media.addOption(":no-drop-late-frames");
         media.addOption(":no-skip-frames");
+
         mediaPlayer.setMedia(media);
         media.release();
 
         mediaPlayer.setEventListener(event -> {
             if (event.type == MediaPlayer.Event.Playing) {
-                audioTracks = Arrays.asList(mediaPlayer.getAudioTracks());
-                currentAudioTrackIndex = getCurrentAudioTrackIndex();
-                Log.d("VLC", "Audio track count: " + audioTracks.size());
-            }
-            if (event.type == MediaPlayer.Event.EncounteredError) {
-                Log.e("VLC", "Playback failed.");
+                TrackDescription[] tracks = mediaPlayer.getAudioTracks();
+                if (tracks != null) {
+                    audioTracks = Arrays.asList(tracks);
+                    currentAudioTrackIndex = getCurrentAudioTrackIndex();
+                    Log.d("VLC", "Audio track count: " + audioTracks.size());
+                }
+            } else if (event.type == MediaPlayer.Event.EncounteredError) {
+                Log.e("VLC", "Playback error!");
             }
         });
 
