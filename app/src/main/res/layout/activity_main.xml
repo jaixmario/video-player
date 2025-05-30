@@ -1,53 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Video URL input -->
     <EditText
         android:id="@+id/editTextUrl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter video URL (e.g. https://...)"
+        android:hint="Enter video URL"
         android:layout_margin="16dp"
         android:inputType="textUri" />
 
-    <!-- Play URL button -->
     <Button
         android:id="@+id/btnPlayUrl"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Play URL"
         android:layout_below="@id/editTextUrl"
-        android:layout_margin="16dp"
-        android:layout_alignParentStart="true" />
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp" />
 
-    <!-- ExoPlayer View -->
-    <com.google.android.exoplayer2.ui.PlayerView
-        android:id="@+id/playerView"
+    <SurfaceView
+        android:id="@+id/surfaceView"
         android:layout_width="match_parent"
-        android:layout_height="260dp"
+        android:layout_height="match_parent"
         android:layout_below="@id/btnPlayUrl"
-        android:layout_margin="16dp"
-        app:use_controller="true" />
-
-    <!-- Track Info Text -->
-    <TextView
-        android:id="@+id/textAudioInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/playerView"
-        android:layout_margin="16dp"
-        android:text="Audio track info will appear here"
-        android:textColor="#000000"
-        android:textSize="16sp" />
-
-    <!-- Spinner for audio track selection -->
-    <Spinner
-        android:id="@+id/spinnerTracks"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/textAudioInfo"
-        android:layout_margin="16dp" />
+        android:layout_marginTop="16dp" />
 </RelativeLayout>
