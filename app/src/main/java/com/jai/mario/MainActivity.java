@@ -3,6 +3,7 @@ package com.jai.mario;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.widget.Button;
 import android.widget.SeekBar;
 
@@ -12,9 +13,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
+import org.videolan.libvlc.MediaPlayer.Event;
+import org.videolan.libvlc.MediaPlayer.TrackDescription;
 import org.videolan.libvlc.util.VLCVideoLayout;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -28,8 +32,11 @@ public class MainActivity extends AppCompatActivity {
     private Button btnSelect, btnPlay, btnPause, btnSwitchAudio;
     private SeekBar seekBar;
 
-    private List<MediaPlayer.TrackDescription> audioTracks = new ArrayList<>();
+    private List<TrackDescription> audioTracks = new ArrayList<>();
     private int currentAudioTrackIndex = 0;
+
+    private Handler handler = new Handler();
+    private Runnable updateSeekBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +56,10 @@ public class MainActivity extends AppCompatActivity {
 
         btnSelect.setOnClickListener(v -> selectVideoFromStorage());
 
-        btnPlay.setOnClickListener(v -> mediaPlayer.play());
+        btnPlay.setOnClickListener(v -> {
+            mediaPlayer.play();
+            startSeekBarUpdater();
+        });
 
         btnPause.setOnClickListener(v -> mediaPlayer.pause());
 
@@ -58,6 +68,27 @@ public class MainActivity extends AppCompatActivity {
                 currentAudioTrackIndex = (currentAudioTrackIndex + 1) % audioTracks.size();
                 int trackId = audioTracks.get(currentAudioTrackIndex).id;
                 mediaPlayer.setAudioTrack(trackId);
+            }
+        });
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            boolean userSeeking = false;
+
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (userSeeking) {
+                    mediaPlayer.setTime(progress);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                userSeeking = true;
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                userSeeking = false;
             }
         });
     }
@@ -86,14 +117,18 @@ public class MainActivity extends AppCompatActivity {
         Media media = new Media(libVLC, uri);
         mediaPlayer.setMedia(media);
         media.release();
-        mediaPlayer.play();
 
         mediaPlayer.setEventListener(event -> {
-            if (event.type == MediaPlayer.Event.MediaChanged || event.type == MediaPlayer.Event.Playing) {
-                audioTracks = mediaPlayer.getAudioTracks();
+            if (event.type == Event.Playing) {
+                audioTracks = Arrays.asList(mediaPlayer.getAudioTracks());
                 currentAudioTrackIndex = getCurrentAudioTrackIndex();
+
+                seekBar.setMax((int) mediaPlayer.getLength());
+                startSeekBarUpdater();
             }
         });
+
+        mediaPlayer.play();
     }
 
     private int getCurrentAudioTrackIndex() {
@@ -104,9 +139,23 @@ public class MainActivity extends AppCompatActivity {
         return 0;
     }
 
+    private void startSeekBarUpdater() {
+        updateSeekBar = new Runnable() {
+            @Override
+            public void run() {
+                if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+                    seekBar.setProgress((int) mediaPlayer.getTime());
+                    handler.postDelayed(this, 500);
+                }
+            }
+        };
+        handler.postDelayed(updateSeekBar, 0);
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (updateSeekBar != null) handler.removeCallbacks(updateSeekBar);
         mediaPlayer.stop();
         mediaPlayer.detachViews();
         mediaPlayer.release();
