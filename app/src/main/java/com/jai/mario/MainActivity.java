@@ -16,8 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector.SelectionOverride;
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedTrackInfo;
-import com.google.android.exoplayer2.trackselection.TrackSelectionOverride;
 import com.google.android.exoplayer2.ui.PlayerView;
 
 import java.io.IOException;
@@ -57,19 +57,18 @@ public class MainActivity extends AppCompatActivity {
         spinnerTracks.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
-                if (player.getCurrentTracks() == null) return;
                 MappedTrackInfo trackInfo = trackSelector.getCurrentMappedTrackInfo();
                 if (trackInfo != null) {
                     int rendererIndex = getAudioRendererIndex(trackInfo);
                     if (rendererIndex != -1 && position < audioTrackIndices.size()) {
-                        TrackSelectionOverride override = new TrackSelectionOverride(
-                                trackInfo.getTrackGroups(rendererIndex).get(audioTrackIndices.get(position)),
-                                0
+                        SelectionOverride override = new SelectionOverride(audioTrackIndices.get(position), 0);
+                        DefaultTrackSelector.ParametersBuilder parametersBuilder = trackSelector.buildUponParameters();
+                        parametersBuilder.setSelectionOverride(
+                                rendererIndex,
+                                trackInfo.getTrackGroups(rendererIndex),
+                                override
                         );
-                        trackSelector.setParameters(
-                                trackSelector.buildUponParameters()
-                                        .setTrackSelectionOverrides(override)
-                        );
+                        trackSelector.setParameters(parametersBuilder);
                     }
                 }
             }
@@ -119,7 +118,9 @@ public class MainActivity extends AppCompatActivity {
                     audioTrackIndices.add(i);
                     infoBuilder.append("Audio Track ").append(audioTrackIndices.size() - 1).append(":\n");
                     infoBuilder.append("  MIME: ").append(mime).append("\n");
-                    String lang = format.containsKey(MediaFormat.KEY_LANGUAGE) ? format.getString(MediaFormat.KEY_LANGUAGE) : "Unknown";
+                    String lang = format.containsKey(MediaFormat.KEY_LANGUAGE)
+                            ? format.getString(MediaFormat.KEY_LANGUAGE)
+                            : "Unknown";
                     infoBuilder.append("  Language: ").append(lang).append("\n");
                     spinnerItems.add("Track " + (audioTrackIndices.size() - 1) + " (" + lang + ")");
                 }
