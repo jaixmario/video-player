@@ -1,59 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main_layout"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:layout_height="match_parent">
 
-    <!-- Select Video Button -->
     <Button
         android:id="@+id/btnSelect"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Select Video"
+        android:layout_margin="16dp"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="16dp" />
-
-    <!-- VideoView -->
-    <VideoView
-        android:id="@+id/videoView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/btnSelect"
-        android:layout_marginTop="16dp"
         android:layout_centerHorizontal="true" />
 
-    <!-- Play Button -->
-    <Button
-        android:id="@+id/btnPlay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Play"
-        android:layout_below="@id/videoView"
-        android:layout_alignParentStart="true"
+    <com.google.android.exoplayer2.ui.PlayerView
+        android:id="@+id/playerView"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_below="@id/btnSelect"
         android:layout_marginTop="16dp"
-        android:layout_marginStart="16dp" />
+        app:use_controller="true" />
 
-    <!-- Pause Button -->
-    <Button
-        android:id="@+id/btnPause"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Pause"
-        android:layout_below="@id/videoView"
-        android:layout_toEndOf="@id/btnPlay"
-        android:layout_marginTop="16dp"
-        android:layout_marginStart="16dp" />
-
-    <!-- SeekBar -->
-    <SeekBar
-        android:id="@+id/seekBar"
+    <TextView
+        android:id="@+id/textAudioInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/btnPause"
-        android:layout_marginTop="16dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" />
+        android:layout_below="@id/playerView"
+        android:layout_margin="16dp"
+        android:text="Audio tracks will appear here"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <Spinner
+        android:id="@+id/spinnerTracks"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/textAudioInfo"
+        android:layout_margin="16dp" />
 </RelativeLayout>

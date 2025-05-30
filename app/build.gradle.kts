@@ -48,6 +48,8 @@ android {
 }
 
 dependencies {
-    implementation("org.videolan.android:libvlc-all:3.5.1")
+    dependencies {
+    implementation ("androidx.appcompat:appcompat:1.6.1") 
+    implementation ("com.google.android.exoplayer:exoplayer:2.19.1")
     implementation ("com.google.android.material:material:1.6.0")
 }
