@@ -18,11 +18,23 @@ android {
 
     signingConfigs {
         create("release") {
-            // These four ENV vars will be provided by GitHub Actions
             storeFile = file(System.getenv("KEYSTORE_PATH"))
             storePassword = System.getenv("KEYSTORE_PASSWORD")
-            keyAlias    = System.getenv("KEY_ALIAS")
+            keyAlias = System.getenv("KEY_ALIAS")
             keyPassword = System.getenv("KEY_PASSWORD")
+        }
+    }
+
+    defaultConfig {
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
+    }
+
+    packagingOptions {
+        pickFirst("lib/**/libc++_shared.so")
+        pickFirst("lib/**/libvlc.so")
+        pickFirst("lib/**/libvlcjni.so")
         }
     }
 

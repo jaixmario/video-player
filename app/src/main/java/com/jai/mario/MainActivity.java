@@ -65,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Media media = new Media(libVLC, url);
+            media.addOption(":network-caching=300");
             media.addOption(":no-drop-late-frames");
             media.addOption(":no-skip-frames");
 
@@ -72,16 +73,29 @@ public class MainActivity extends AppCompatActivity {
             media.release();
 
             mediaPlayer.setEventListener(event -> {
-                if (event.type == MediaPlayer.Event.Playing) {
-                    audioTracks = Arrays.asList(mediaPlayer.getAudioTracks());
-                    currentAudioTrackIndex = getCurrentAudioTrackIndex();
-                    Log.d("AUDIO", "Available tracks: " + audioTracks.size());
+                switch (event.type) {
+                    case MediaPlayer.Event.Playing:
+                        Log.d("VLC", "Video is playing");
+                        audioTracks = Arrays.asList(mediaPlayer.getAudioTracks());
+                        currentAudioTrackIndex = getCurrentAudioTrackIndex();
+                        break;
+                    case MediaPlayer.Event.EncounteredError:
+                    case MediaPlayer.Event.Error:
+                        Log.e("VLC", "Playback error occurred.");
+                        break;
+                    case MediaPlayer.Event.Stopped:
+                        Log.d("VLC", "Playback stopped.");
+                        break;
+                    case MediaPlayer.Event.EndReached:
+                        Log.d("VLC", "Playback ended.");
+                        break;
                 }
             });
 
             mediaPlayer.play();
+
         } catch (Exception e) {
-            Log.e("MainActivity", "Failed to play video", e);
+            Log.e("MainActivity", "Error while preparing media: ", e);
         }
     }
 
