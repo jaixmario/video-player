@@ -1,16 +1,15 @@
 package com.jai.mario;
 
-import android.content.Intent;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.exoplayer2.ExoPlayer;
@@ -26,15 +25,17 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final int REQUEST_CODE_PICK_VIDEO = 1;
-
     private PlayerView playerView;
     private ExoPlayer player;
     private DefaultTrackSelector trackSelector;
-    private TextView textAudioInfo;
+
+    private EditText editTextUrl;
+    private Button btnPlayUrl;
     private Spinner spinnerTracks;
+    private TextView textAudioInfo;
+
     private List<Integer> audioTrackIndices = new ArrayList<>();
-    private Uri selectedUri;
+    private Uri currentUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,9 +43,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         playerView = findViewById(R.id.playerView);
-        textAudioInfo = findViewById(R.id.textAudioInfo);
+        editTextUrl = findViewById(R.id.editTextUrl);
+        btnPlayUrl = findViewById(R.id.btnPlayUrl);
         spinnerTracks = findViewById(R.id.spinnerTracks);
-        Button btnSelect = findViewById(R.id.btnSelect);
+        textAudioInfo = findViewById(R.id.textAudioInfo);
 
         trackSelector = new DefaultTrackSelector(this);
         player = new ExoPlayer.Builder(this)
@@ -52,7 +54,14 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         playerView.setPlayer(player);
 
-        btnSelect.setOnClickListener(v -> selectVideoFromStorage());
+        btnPlayUrl.setOnClickListener(v -> {
+            String url = editTextUrl.getText().toString().trim();
+            if (!url.isEmpty()) {
+                currentUri = Uri.parse(url);
+                playVideo(currentUri);
+                analyzeAudioTracks(currentUri); // May work for progressive streams
+            }
+        });
 
         spinnerTracks.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
@@ -62,13 +71,9 @@ public class MainActivity extends AppCompatActivity {
                     int rendererIndex = getAudioRendererIndex(trackInfo);
                     if (rendererIndex != -1 && position < audioTrackIndices.size()) {
                         SelectionOverride override = new SelectionOverride(audioTrackIndices.get(position), 0);
-                        DefaultTrackSelector.ParametersBuilder parametersBuilder = trackSelector.buildUponParameters();
-                        parametersBuilder.setSelectionOverride(
-                                rendererIndex,
-                                trackInfo.getTrackGroups(rendererIndex),
-                                override
-                        );
-                        trackSelector.setParameters(parametersBuilder);
+                        DefaultTrackSelector.ParametersBuilder builder = trackSelector.buildUponParameters();
+                        builder.setSelectionOverride(rendererIndex, trackInfo.getTrackGroups(rendererIndex), override);
+                        trackSelector.setParameters(builder);
                     }
                 }
             }
@@ -78,36 +83,20 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void selectVideoFromStorage() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("video/*");
-        startActivityForResult(Intent.createChooser(intent, "Select Video"), REQUEST_CODE_PICK_VIDEO);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_PICK_VIDEO && resultCode == RESULT_OK && data != null) {
-            selectedUri = data.getData();
-            playVideo(selectedUri);
-            analyzeAudioTracks(selectedUri);
-        }
-    }
-
-    private void playVideo(Uri videoUri) {
-        player.setMediaItem(MediaItem.fromUri(videoUri));
+    private void playVideo(Uri uri) {
+        player.setMediaItem(MediaItem.fromUri(uri));
         player.prepare();
         player.play();
     }
 
-    private void analyzeAudioTracks(Uri videoUri) {
+    private void analyzeAudioTracks(Uri uri) {
         MediaExtractor extractor = new MediaExtractor();
         StringBuilder infoBuilder = new StringBuilder();
         audioTrackIndices.clear();
         List<String> spinnerItems = new ArrayList<>();
 
         try {
-            extractor.setDataSource(this, videoUri, null);
+            extractor.setDataSource(this, uri, null);
             int trackCount = extractor.getTrackCount();
             infoBuilder.append("Total Tracks: ").append(trackCount).append("\n");
 
@@ -134,7 +123,6 @@ public class MainActivity extends AppCompatActivity {
 
         textAudioInfo.setText(infoBuilder.toString());
 
-        // Update Spinner
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, spinnerItems);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerTracks.setAdapter(adapter);
