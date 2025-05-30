@@ -1,10 +1,12 @@
 package com.jai.mario;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
-import android.widget.EditText;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import org.videolan.libvlc.LibVLC;
@@ -18,13 +20,13 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final int REQUEST_CODE_PICK_VIDEO = 1;
+
     private VLCVideoLayout videoLayout;
     private LibVLC libVLC;
     private MediaPlayer mediaPlayer;
 
-    private EditText edtUrl;
-    private Button btnPlay, btnSwitchAudio;
-
+    private Button btnSelectFile, btnSwitchAudio;
     private List<MediaPlayer.TrackDescription> audioTracks = new ArrayList<>();
     private int currentAudioTrackIndex = 0;
 
@@ -34,20 +36,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         videoLayout = findViewById(R.id.videoView);
-        edtUrl = findViewById(R.id.edtUrl);
-        btnPlay = findViewById(R.id.btnPlay);
+        btnSelectFile = findViewById(R.id.btnSelectFile);
         btnSwitchAudio = findViewById(R.id.btnSwitchAudio);
 
         libVLC = new LibVLC(this, new ArrayList<>());
         mediaPlayer = new MediaPlayer(libVLC);
         mediaPlayer.attachViews(videoLayout, null, false, false);
 
-        btnPlay.setOnClickListener(v -> {
-            String url = edtUrl.getText().toString().trim();
-            if (!url.isEmpty()) {
-                playNetworkVideo(url);
-            }
-        });
+        btnSelectFile.setOnClickListener(v -> openFilePicker());
 
         btnSwitchAudio.setOnClickListener(v -> {
             if (audioTracks.size() > 1) {
@@ -58,44 +54,51 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void playNetworkVideo(String url) {
-        try {
-            if (mediaPlayer.isPlaying()) {
-                mediaPlayer.stop();
+    private void openFilePicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.setType("video/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(intent, REQUEST_CODE_PICK_VIDEO);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_PICK_VIDEO && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            try {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } catch (Exception e) {
+                Log.w("MainActivity", "Persist permission failed", e);
             }
-
-            Media media = new Media(libVLC, url);
-            media.addOption(":network-caching=300");
-            media.addOption(":no-drop-late-frames");
-            media.addOption(":no-skip-frames");
-
-            mediaPlayer.setMedia(media);
-            media.release();
-
-            mediaPlayer.setEventListener(event -> {
-                switch (event.type) {
-                    case MediaPlayer.Event.Playing:
-                        Log.d("VLC", "Video is playing");
-                        audioTracks = Arrays.asList(mediaPlayer.getAudioTracks());
-                        currentAudioTrackIndex = getCurrentAudioTrackIndex();
-                        break;
-                    case MediaPlayer.Event.EncounteredError:
-                        Log.e("VLC", "Playback encountered an error!");
-                        break;
-                    case MediaPlayer.Event.Stopped:
-                        Log.d("VLC", "Playback stopped.");
-                        break;
-                    case MediaPlayer.Event.EndReached:
-                        Log.d("VLC", "Playback ended.");
-                        break;
-                }
-            });
-
-            mediaPlayer.play();
-
-        } catch (Exception e) {
-            Log.e("MainActivity", "Error while preparing media: ", e);
+            playVideo(uri);
         }
+    }
+
+    private void playVideo(Uri uri) {
+        if (mediaPlayer.isPlaying()) {
+            mediaPlayer.stop();
+        }
+
+        Media media = new Media(libVLC, uri);
+        media.addOption(":no-drop-late-frames");
+        media.addOption(":no-skip-frames");
+        mediaPlayer.setMedia(media);
+        media.release();
+
+        mediaPlayer.setEventListener(event -> {
+            if (event.type == MediaPlayer.Event.Playing) {
+                audioTracks = Arrays.asList(mediaPlayer.getAudioTracks());
+                currentAudioTrackIndex = getCurrentAudioTrackIndex();
+                Log.d("VLC", "Audio track count: " + audioTracks.size());
+            }
+            if (event.type == MediaPlayer.Event.EncounteredError) {
+                Log.e("VLC", "Playback failed.");
+            }
+        });
+
+        mediaPlayer.play();
     }
 
     private int getCurrentAudioTrackIndex() {

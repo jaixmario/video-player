@@ -56,6 +56,6 @@ android {
 }
 
 dependencies {
-    implementation("org.videolan.android:libvlc-all:3.5.1")
+    implementation("org.videolan.android:libvlc-all:4.0.0-eap20")
     implementation("com.google.android.material:material:1.6.0")
 }
