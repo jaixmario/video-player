@@ -49,7 +49,6 @@ public class MainActivity extends AppCompatActivity {
 
         libVLC = new LibVLC(this, options);
         mediaPlayer = new MediaPlayer(libVLC);
-
         mediaPlayer.attachViews(videoLayout, null, false, false);
 
         btnPlayUrl.setOnClickListener(v -> {
@@ -86,29 +85,35 @@ public class MainActivity extends AppCompatActivity {
         media.release();
         mediaPlayer.play();
 
-        // Wait a second before reading tracks
-        videoLayout.postDelayed(this::loadAudioTracks, 1200);
+        loadAudioTracksWithRetry(0);
     }
 
-    private void loadAudioTracks() {
-        audioTracks.clear();
+    private void loadAudioTracksWithRetry(int attempt) {
         MediaPlayer.TrackDescription[] tracks = mediaPlayer.getAudioTracks();
-        ArrayList<String> trackNames = new ArrayList<>();
+
+        if ((tracks == null || tracks.length == 0) && attempt < 3) {
+            // Try again after 1 second
+            videoLayout.postDelayed(() -> loadAudioTracksWithRetry(attempt + 1), 1000);
+            return;
+        }
+
+        audioTracks.clear();
+        ArrayList<String> names = new ArrayList<>();
 
         if (tracks != null) {
             for (MediaPlayer.TrackDescription track : tracks) {
-                if (track.name != null) {
+                if (track != null && track.name != null) {
                     audioTracks.add(track);
-                    trackNames.add(track.name);
+                    names.add(track.name);
                 }
             }
         }
 
-        spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, trackNames);
+        spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, names);
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerTracks.setAdapter(spinnerAdapter);
 
-        textAudioInfo.setText("Audio Tracks: " + trackNames.size());
+        textAudioInfo.setText("Audio Tracks: " + names.size());
     }
 
     @Override
