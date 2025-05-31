@@ -1,69 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#202020">
+    android:orientation="vertical"
+    android:padding="16dp">
 
     <EditText
-        android:id="@+id/editTextUrl"
+        android:id="@+id/video_url_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter video URL"
-        android:layout_margin="16dp"
-        android:inputType="textUri"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#AAAAAA"
-        android:backgroundTint="#CCCCCC"/>
+        android:hint="Enter video URL (e.g., .mkv)"
+        android:inputType="textUri" />
 
     <Button
-        android:id="@+id/btnPlayUrl"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Play URL"
-        android:layout_below="@id/editTextUrl"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp" />
-
-    <Button
-        android:id="@+id/btnShowMetadata"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Show Metadata"
-        android:layout_toEndOf="@id/btnPlayUrl"
-        android:layout_alignTop="@id/btnPlayUrl"
-        android:layout_marginStart="16dp" />
-
-    <org.videolan.libvlc.util.VLCVideoLayout
-        android:id="@+id/vlcVideoLayout"
-        android:layout_width="match_parent"
-        android:layout_height="240dp"
-        android:layout_below="@id/btnPlayUrl"
-        android:layout_marginTop="12dp" />
-
-    <TextView
-        android:id="@+id/textAudioInfo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Audio Tracks:"
-        android:layout_below="@id/vlcVideoLayout"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:textColor="#FFFFFF" />
-
-    <Spinner
-        android:id="@+id/spinnerTracks"
+        android:id="@+id/play_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/textAudioInfo"
-        android:layout_margin="16dp" />
+        android:text="Play Video" />
 
-    <TextView
-        android:id="@+id/textMetadata"
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/player_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Metadata will appear here"
-        android:layout_below="@id/spinnerTracks"
-        android:layout_margin="16dp"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp" />
-</RelativeLayout>
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp"
+        android:keepScreenOn="true" />
+</LinearLayout>
