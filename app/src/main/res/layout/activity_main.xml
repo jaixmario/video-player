@@ -10,14 +10,19 @@
         android:id="@+id/video_url_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter video URL (e.g., .mkv)"
-        android:inputType="textUri" />
+        android:hint="Enter video URL (e.g., MKV)" />
 
     <Button
         android:id="@+id/play_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Play Video" />
+
+    <Button
+        android:id="@+id/select_audio_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select Audio Track" />
 
     <androidx.media3.ui.PlayerView
         android:id="@+id/player_view"

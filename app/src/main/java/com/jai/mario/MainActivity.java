@@ -13,7 +13,6 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.Player;
 import androidx.media3.common.TrackGroup;
-import androidx.media3.common.TrackGroupArray;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.TrackSelectionParameters;
 import androidx.media3.common.Tracks;
@@ -22,6 +21,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo;
 import androidx.media3.ui.PlayerView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private Button selectAudioButton;
 
     private DefaultTrackSelector trackSelector;
-    private TrackGroupArray currentAudioGroups;
+    private List<TrackGroup> audioTrackGroups = new ArrayList<>();
     private int audioRendererIndex = -1;
 
     @Override
@@ -82,10 +82,14 @@ public class MainActivity extends AppCompatActivity {
                 MappedTrackInfo mappedTrackInfo = trackSelector.getCurrentMappedTrackInfo();
                 if (mappedTrackInfo == null) return;
 
+                audioTrackGroups.clear();
+
                 for (int rendererIndex = 0; rendererIndex < mappedTrackInfo.getRendererCount(); rendererIndex++) {
                     if (mappedTrackInfo.getRendererType(rendererIndex) == C.TRACK_TYPE_AUDIO) {
-                        currentAudioGroups = mappedTrackInfo.getTrackGroups(rendererIndex);
                         audioRendererIndex = rendererIndex;
+                        for (int groupIndex = 0; groupIndex < mappedTrackInfo.getTrackGroups(rendererIndex).length; groupIndex++) {
+                            audioTrackGroups.add(mappedTrackInfo.getTrackGroups(rendererIndex).get(groupIndex));
+                        }
                     }
                 }
             }
@@ -95,33 +99,31 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showAudioSelectionDialog() {
-        if (currentAudioGroups == null || currentAudioGroups.length == 0) {
+        if (audioTrackGroups.isEmpty()) {
             Toast.makeText(this, "No audio tracks available", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String[] items = new String[currentAudioGroups.length];
-        for (int i = 0; i < currentAudioGroups.length; i++) {
-            String lang = currentAudioGroups.get(i).getFormat(0).language;
-            String mime = currentAudioGroups.get(i).getFormat(0).sampleMimeType;
+        String[] items = new String[audioTrackGroups.size()];
+        for (int i = 0; i < audioTrackGroups.size(); i++) {
+            String lang = audioTrackGroups.get(i).getFormat(0).language;
+            String mime = audioTrackGroups.get(i).getFormat(0).sampleMimeType;
             items[i] = (lang != null ? lang : "Track " + (i + 1)) + " (" + mime + ")";
         }
 
         new AlertDialog.Builder(this)
                 .setTitle("Select Audio Track")
                 .setItems(items, (dialog, index) -> {
-                    TrackGroup group = currentAudioGroups.get(index);
-
+                    TrackGroup group = audioTrackGroups.get(index);
                     TrackSelectionOverride override = new TrackSelectionOverride(group, List.of(0));
-                    TrackSelectionParameters parameters = trackSelector
-                            .getParameters()
+
+                    TrackSelectionParameters parameters = trackSelector.getParameters()
                             .buildUpon()
                             .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
                             .addOverride(override)
                             .build();
 
                     trackSelector.setParameters(parameters);
-
                     Toast.makeText(this, "Selected: " + items[index], Toast.LENGTH_SHORT).show();
                 })
                 .show();
