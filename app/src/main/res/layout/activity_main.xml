@@ -20,6 +20,15 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp" />
 
+    <Button
+        android:id="@+id/btnShowMetadata"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Show Metadata"
+        android:layout_toEndOf="@id/btnPlayUrl"
+        android:layout_alignTop="@id/btnPlayUrl"
+        android:layout_marginStart="16dp" />
+
     <org.videolan.libvlc.util.VLCVideoLayout
         android:id="@+id/vlcVideoLayout"
         android:layout_width="match_parent"
@@ -42,4 +51,14 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/textAudioInfo"
         android:layout_margin="16dp" />
+
+    <TextView
+        android:id="@+id/textMetadata"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Metadata will appear here"
+        android:layout_below="@id/spinnerTracks"
+        android:layout_margin="16dp"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp" />
 </RelativeLayout>

@@ -21,10 +21,10 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity {
 
     private EditText editTextUrl;
-    private Button btnPlayUrl;
+    private Button btnPlayUrl, btnShowMetadata;
     private VLCVideoLayout videoLayout;
     private Spinner spinnerTracks;
-    private TextView textAudioInfo;
+    private TextView textAudioInfo, textMetadata;
 
     private LibVLC libVLC;
     private MediaPlayer mediaPlayer;
@@ -39,9 +39,11 @@ public class MainActivity extends AppCompatActivity {
 
         editTextUrl = findViewById(R.id.editTextUrl);
         btnPlayUrl = findViewById(R.id.btnPlayUrl);
+        btnShowMetadata = findViewById(R.id.btnShowMetadata);
         videoLayout = findViewById(R.id.vlcVideoLayout);
         spinnerTracks = findViewById(R.id.spinnerTracks);
         textAudioInfo = findViewById(R.id.textAudioInfo);
+        textMetadata = findViewById(R.id.textMetadata);
 
         ArrayList<String> options = new ArrayList<>();
         options.add("--audio-time-stretch");
@@ -58,6 +60,15 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             playVideo(url);
+        });
+
+        btnShowMetadata.setOnClickListener(v -> {
+            String url = editTextUrl.getText().toString().trim();
+            if (url.isEmpty()) {
+                Toast.makeText(this, "Enter a URL first", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showMetadata(url);
         });
 
         spinnerTracks.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -81,22 +92,21 @@ public class MainActivity extends AppCompatActivity {
 
         Media media = new Media(libVLC, Uri.parse(url));
         media.addOption(":network-caching=1000");
+
+        media.parseAsync(Media.Parse.FetchNetwork);
+        media.setEventListener(event -> {
+            if (event.type == Media.Event.ParsedChanged) {
+                runOnUiThread(this::loadAudioTracks);
+            }
+        });
+
         mediaPlayer.setMedia(media);
         media.release();
         mediaPlayer.play();
-
-        loadAudioTracksWithRetry(0);
     }
 
-    private void loadAudioTracksWithRetry(int attempt) {
+    private void loadAudioTracks() {
         MediaPlayer.TrackDescription[] tracks = mediaPlayer.getAudioTracks();
-
-        if ((tracks == null || tracks.length == 0) && attempt < 3) {
-            // Try again after 1 second
-            videoLayout.postDelayed(() -> loadAudioTracksWithRetry(attempt + 1), 1000);
-            return;
-        }
-
         audioTracks.clear();
         ArrayList<String> names = new ArrayList<>();
 
@@ -114,6 +124,40 @@ public class MainActivity extends AppCompatActivity {
         spinnerTracks.setAdapter(spinnerAdapter);
 
         textAudioInfo.setText("Audio Tracks: " + names.size());
+    }
+
+    private void showMetadata(String url) {
+        Media media = new Media(libVLC, Uri.parse(url));
+        media.parseAsync(Media.Parse.FetchNetwork);
+
+        media.setEventListener(event -> {
+            if (event.type == Media.Event.ParsedChanged) {
+                runOnUiThread(() -> {
+                    StringBuilder info = new StringBuilder();
+
+                    if (media.getTrackCount() == 0) {
+                        info.append("No tracks found.\n");
+                    } else {
+                        for (int i = 0; i < media.getTrackCount(); i++) {
+                            Media.Track track = media.getTrack(i);
+                            info.append("Track ").append(i).append(": ").append(track.type.name()).append("\n");
+
+                            if (track.type == Media.Track.Type.Video) {
+                                info.append("  Resolution: ").append(track.video.width).append("x").append(track.video.height).append("\n");
+                            } else if (track.type == Media.Track.Type.Audio) {
+                                info.append("  Channels: ").append(track.audio.channels).append("\n");
+                                info.append("  Rate: ").append(track.audio.rate).append(" Hz\n");
+                            } else if (track.type == Media.Track.Type.Text) {
+                                info.append("  Subtitle Language: ").append(track.language != null ? track.language : "Unknown").append("\n");
+                            }
+                        }
+                    }
+
+                    textMetadata.setText(info.toString());
+                    media.release();
+                });
+            }
+        });
     }
 
     @Override
