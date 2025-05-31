@@ -139,31 +139,37 @@ public class MainActivity extends AppCompatActivity {
                     info.append("No tracks found.\n");
                 } else {
                     for (int i = 0; i < media.getTrackCount(); i++) {
-                        Media.Track track = media.getTrack(i);
-                        if (track == null) continue;
+                        Media.Track baseTrack = media.getTrack(i);
+                        if (baseTrack == null) continue;
 
                         info.append("Track ").append(i).append(": ");
 
-                        switch (track.type) {
+                        switch (baseTrack.type) {
                             case Media.Track.Type.Video:
+                                Media.VideoTrack videoTrack = (Media.VideoTrack) baseTrack;
                                 info.append("Video\n");
                                 info.append("  Resolution: ")
-                                    .append(track.width)
+                                    .append(videoTrack.width)
                                     .append("x")
-                                    .append(track.height)
+                                    .append(videoTrack.height)
                                     .append("\n");
                                 break;
+
                             case Media.Track.Type.Audio:
+                                Media.AudioTrack audioTrack = (Media.AudioTrack) baseTrack;
                                 info.append("Audio\n");
-                                info.append("  Channels: ").append(track.channels).append("\n");
-                                info.append("  Rate: ").append(track.rate).append(" Hz\n");
+                                info.append("  Channels: ").append(audioTrack.channels).append("\n");
+                                info.append("  Rate: ").append(audioTrack.rate).append(" Hz\n");
                                 break;
+
                             case Media.Track.Type.Text:
+                                Media.SubtitleTrack subtitleTrack = (Media.SubtitleTrack) baseTrack;
                                 info.append("Subtitle\n");
                                 info.append("  Language: ")
-                                    .append(track.language != null ? track.language : "Unknown")
+                                    .append(subtitleTrack.language != null ? subtitleTrack.language : "Unknown")
                                     .append("\n");
                                 break;
+
                             default:
                                 info.append("Other\n");
                         }
