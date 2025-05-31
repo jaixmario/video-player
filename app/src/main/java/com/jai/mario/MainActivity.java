@@ -15,7 +15,6 @@ import androidx.media3.common.Player;
 import androidx.media3.common.TrackGroup;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.TrackSelectionParameters;
-import androidx.media3.common.Tracks;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo;
@@ -78,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
 
         player.addListener(new Player.Listener() {
             @Override
-            public void onTracksChanged(Player player, Tracks tracks) {
+            public void onTracksChanged() {
                 MappedTrackInfo mappedTrackInfo = trackSelector.getCurrentMappedTrackInfo();
                 if (mappedTrackInfo == null) return;
 
