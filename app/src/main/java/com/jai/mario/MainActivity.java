@@ -127,49 +127,54 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showMetadata(String url) {
-        Media media = new Media(libVLC, Uri.parse(url));
-        media.parseAsync(Media.Parse.FetchNetwork);
+    Media media = new Media(libVLC, Uri.parse(url));
+    media.parseAsync(Media.Parse.FetchNetwork);
 
-        media.setEventListener(event -> {
-            if (event.type == Media.Event.ParsedChanged) {
-                runOnUiThread(() -> {
-                    StringBuilder info = new StringBuilder();
+    media.setEventListener(event -> {
+        if (event.type == Media.Event.ParsedChanged) {
+            runOnUiThread(() -> {
+                StringBuilder info = new StringBuilder();
 
-                    if (media.getTrackCount() == 0) {
-                        info.append("No tracks found.\n");
-                    } else {
-                        for (int i = 0; i < media.getTrackCount(); i++) {
-                            Media.Track track = media.getTrack(i);
-                            if (track == null) continue;
+                if (media.getTrackCount() == 0) {
+                    info.append("No tracks found.\n");
+                } else {
+                    for (int i = 0; i < media.getTrackCount(); i++) {
+                        Media.Track track = media.getTrack(i);
+                        if (track == null) continue;
 
-                            info.append("Track ").append(i).append(": ");
+                        info.append("Track ").append(i).append(": ");
 
-                            switch (track.type) {
-                                case Media.Track.Type.Video:
-                                    info.append("Video\n");
-                                    info.append("  Resolution: ").append(track.getWidth())
-                                        .append("x").append(track.getHeight()).append("\n");
-                                    break;
-                                case Media.Track.Type.Audio:
-                                    info.append("Audio\n");
-                                    info.append("  Channels: ").append(track.getChannels()).append("\n");
-                                    info.append("  Rate: ").append(track.getRate()).append(" Hz\n");
-                                    break;
-                                case Media.Track.Type.Text:
-                                    info.append("Subtitle\n");
-                                    info.append("  Language: ").append(track.getLanguage() != null ? track.getLanguage() : "Unknown").append("\n");
-                                    break;
-                                default:
-                                    info.append("Other\n");
-                            }
+                        switch (track.type) {
+                            case Media.Track.Type.Video:
+                                info.append("Video\n");
+                                info.append("  Resolution: ")
+                                    .append(track.width)
+                                    .append("x")
+                                    .append(track.height)
+                                    .append("\n");
+                                break;
+                            case Media.Track.Type.Audio:
+                                info.append("Audio\n");
+                                info.append("  Channels: ").append(track.channels).append("\n");
+                                info.append("  Rate: ").append(track.rate).append(" Hz\n");
+                                break;
+                            case Media.Track.Type.Text:
+                                info.append("Subtitle\n");
+                                info.append("  Language: ")
+                                    .append(track.language != null ? track.language : "Unknown")
+                                    .append("\n");
+                                break;
+                            default:
+                                info.append("Other\n");
                         }
                     }
+                }
 
-                    textMetadata.setText(info.toString());
-                    media.release();
-                });
-            }
-        });
+                textMetadata.setText(info.toString());
+                media.release();
+            });
+        }
+    });
     }
 
     @Override
