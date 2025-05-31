@@ -2,18 +2,11 @@ package com.jai.mario;
 
 import android.net.Uri;
 import android.os.Bundle;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.Spinner;
-import android.widget.TextView;
-import android.widget.Toast;
-
+import android.view.View;
+import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 
-import org.videolan.libvlc.LibVLC;
-import org.videolan.libvlc.Media;
-import org.videolan.libvlc.MediaPlayer;
+import org.videolan.libvlc.*;
 import org.videolan.libvlc.util.VLCVideoLayout;
 
 import java.util.ArrayList;
@@ -31,6 +24,8 @@ public class MainActivity extends AppCompatActivity {
 
     private ArrayList<MediaPlayer.TrackDescription> audioTracks = new ArrayList<>();
     private ArrayAdapter<String> spinnerAdapter;
+
+    private Media currentMedia = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,17 +66,18 @@ public class MainActivity extends AppCompatActivity {
             showMetadata(url);
         });
 
-        spinnerTracks.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+        spinnerTracks.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (!audioTracks.isEmpty() && position < audioTracks.size()) {
                     int trackId = audioTracks.get(position).id;
                     mediaPlayer.setAudioTrack(trackId);
+                    Toast.makeText(MainActivity.this, "Switched to: " + audioTracks.get(position).name, Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
 
@@ -90,18 +86,17 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.stop();
         }
 
-        Media media = new Media(libVLC, Uri.parse(url));
-        media.addOption(":network-caching=1000");
+        currentMedia = new Media(libVLC, Uri.parse(url));
+        currentMedia.addOption(":network-caching=1000");
 
-        media.parseAsync(Media.Parse.FetchNetwork);
-        media.setEventListener(event -> {
+        currentMedia.setEventListener(event -> {
             if (event.type == Media.Event.ParsedChanged) {
                 runOnUiThread(this::loadAudioTracks);
             }
         });
 
-        mediaPlayer.setMedia(media);
-        media.release();
+        mediaPlayer.setMedia(currentMedia);
+        currentMedia.parseAsync(Media.Parse.FetchNetwork);
         mediaPlayer.play();
     }
 
@@ -119,68 +114,74 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, names);
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerTracks.setAdapter(spinnerAdapter);
-
-        textAudioInfo.setText("Audio Tracks: " + names.size());
+        runOnUiThread(() -> {
+            if (!names.isEmpty()) {
+                spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, names);
+                spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinnerTracks.setAdapter(spinnerAdapter);
+                textAudioInfo.setText("Audio Tracks: " + names.size());
+            } else {
+                textAudioInfo.setText("No audio tracks found.");
+            }
+        });
     }
 
     private void showMetadata(String url) {
-    Media media = new Media(libVLC, Uri.parse(url));
-    media.parseAsync(Media.Parse.FetchNetwork);
+        Media tempMedia = new Media(libVLC, Uri.parse(url));
 
-    media.setEventListener(event -> {
-        if (event.type == Media.Event.ParsedChanged) {
-            runOnUiThread(() -> {
-                StringBuilder info = new StringBuilder();
+        tempMedia.setEventListener(event -> {
+            if (event.type == Media.Event.ParsedChanged) {
+                runOnUiThread(() -> {
+                    StringBuilder info = new StringBuilder();
 
-                if (media.getTrackCount() == 0) {
-                    info.append("No tracks found.\n");
-                } else {
-                    for (int i = 0; i < media.getTrackCount(); i++) {
-                        Media.Track baseTrack = media.getTrack(i);
-                        if (baseTrack == null) continue;
+                    if (tempMedia.getTrackCount() == 0) {
+                        info.append("No tracks found.\n");
+                    } else {
+                        for (int i = 0; i < tempMedia.getTrackCount(); i++) {
+                            Media.Track baseTrack = tempMedia.getTrack(i);
+                            if (baseTrack == null) continue;
 
-                        info.append("Track ").append(i).append(": ");
+                            info.append("Track ").append(i).append(": ");
 
-                        switch (baseTrack.type) {
-                            case Media.Track.Type.Video:
-                                Media.VideoTrack videoTrack = (Media.VideoTrack) baseTrack;
-                                info.append("Video\n");
-                                info.append("  Resolution: ")
-                                    .append(videoTrack.width)
-                                    .append("x")
-                                    .append(videoTrack.height)
-                                    .append("\n");
-                                break;
+                            switch (baseTrack.type) {
+                                case Media.Track.Type.Video:
+                                    Media.VideoTrack videoTrack = (Media.VideoTrack) baseTrack;
+                                    info.append("Video\n");
+                                    info.append("  Resolution: ")
+                                        .append(videoTrack.width)
+                                        .append("x")
+                                        .append(videoTrack.height)
+                                        .append("\n");
+                                    break;
 
-                            case Media.Track.Type.Audio:
-                                Media.AudioTrack audioTrack = (Media.AudioTrack) baseTrack;
-                                info.append("Audio\n");
-                                info.append("  Channels: ").append(audioTrack.channels).append("\n");
-                                info.append("  Rate: ").append(audioTrack.rate).append(" Hz\n");
-                                break;
+                                case Media.Track.Type.Audio:
+                                    Media.AudioTrack audioTrack = (Media.AudioTrack) baseTrack;
+                                    info.append("Audio\n");
+                                    info.append("  Channels: ").append(audioTrack.channels).append("\n");
+                                    info.append("  Rate: ").append(audioTrack.rate).append(" Hz\n");
+                                    break;
 
-                            case Media.Track.Type.Text:
-                                Media.SubtitleTrack subtitleTrack = (Media.SubtitleTrack) baseTrack;
-                                info.append("Subtitle\n");
-                                info.append("  Language: ")
-                                    .append(subtitleTrack.language != null ? subtitleTrack.language : "Unknown")
-                                    .append("\n");
-                                break;
+                                case Media.Track.Type.Text:
+                                    Media.SubtitleTrack subtitleTrack = (Media.SubtitleTrack) baseTrack;
+                                    info.append("Subtitle\n");
+                                    info.append("  Language: ")
+                                        .append(subtitleTrack.language != null ? subtitleTrack.language : "Unknown")
+                                        .append("\n");
+                                    break;
 
-                            default:
-                                info.append("Other\n");
+                                default:
+                                    info.append("Other\n");
+                            }
                         }
                     }
-                }
 
-                textMetadata.setText(info.toString());
-                media.release();
-            });
-        }
-    });
+                    textMetadata.setText(info.toString());
+                    tempMedia.release(); // Release only after done
+                });
+            }
+        });
+
+        tempMedia.parseAsync(Media.Parse.FetchNetwork);
     }
 
     @Override
