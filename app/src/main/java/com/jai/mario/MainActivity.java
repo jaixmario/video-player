@@ -14,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
-import org.videolan.libvlc.TrackDescription;
 import org.videolan.libvlc.util.VLCVideoLayout;
 
 import java.util.ArrayList;
@@ -29,7 +28,8 @@ public class MainActivity extends AppCompatActivity {
 
     private LibVLC libVLC;
     private MediaPlayer mediaPlayer;
-    private ArrayList<TrackDescription> audioTracks = new ArrayList<>();
+
+    private ArrayList<MediaPlayer.TrackDescription> audioTracks = new ArrayList<>();
     private ArrayAdapter<String> spinnerAdapter;
 
     @Override
@@ -46,8 +46,11 @@ public class MainActivity extends AppCompatActivity {
         ArrayList<String> options = new ArrayList<>();
         options.add("--audio-time-stretch");
         options.add("--network-caching=1000");
+
         libVLC = new LibVLC(this, options);
         mediaPlayer = new MediaPlayer(libVLC);
+
+        mediaPlayer.attachViews(videoLayout, null, false, false);
 
         btnPlayUrl.setOnClickListener(v -> {
             String url = editTextUrl.getText().toString().trim();
@@ -77,39 +80,35 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.stop();
         }
 
-        mediaPlayer.getVLCVout().detachViews();
-        mediaPlayer.getVLCVout().setVideoView(videoLayout);
-        mediaPlayer.getVLCVout().attachViews();
-
         Media media = new Media(libVLC, Uri.parse(url));
         media.addOption(":network-caching=1000");
         mediaPlayer.setMedia(media);
         media.release();
-
         mediaPlayer.play();
 
-        // delay to let tracks load
-        videoLayout.postDelayed(this::loadAudioTracks, 1000);
+        // Wait a second before reading tracks
+        videoLayout.postDelayed(this::loadAudioTracks, 1200);
     }
 
     private void loadAudioTracks() {
         audioTracks.clear();
-        TrackDescription[] tracks = mediaPlayer.getAudioTracks();
-        ArrayList<String> names = new ArrayList<>();
+        MediaPlayer.TrackDescription[] tracks = mediaPlayer.getAudioTracks();
+        ArrayList<String> trackNames = new ArrayList<>();
+
         if (tracks != null) {
-            for (TrackDescription track : tracks) {
-                if (track != null && track.name != null) {
+            for (MediaPlayer.TrackDescription track : tracks) {
+                if (track.name != null) {
                     audioTracks.add(track);
-                    names.add(track.name);
+                    trackNames.add(track.name);
                 }
             }
         }
 
-        spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, names);
+        spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, trackNames);
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerTracks.setAdapter(spinnerAdapter);
 
-        textAudioInfo.setText("Audio Tracks: " + names.size());
+        textAudioInfo.setText("Audio Tracks: " + trackNames.size());
     }
 
     @Override
@@ -117,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         if (mediaPlayer != null) {
             mediaPlayer.stop();
-            mediaPlayer.getVLCVout().detachViews();
+            mediaPlayer.detachViews();
             mediaPlayer.release();
         }
         if (libVLC != null) {
