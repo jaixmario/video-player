@@ -1,4 +1,4 @@
-package com.jai.vlcplayer;
+package com.jai.mario;
 
 import android.app.AlertDialog;
 import android.net.Uri;
