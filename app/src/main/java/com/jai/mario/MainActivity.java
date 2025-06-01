@@ -78,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
 
         player.addListener(new Player.Listener() {
             @Override
-            public void onTracksChanged(Player player, Tracks tracks) {
+            public void onTracksChanged(Tracks tracks) {
                 MappedTrackInfo mappedTrackInfo = trackSelector.getCurrentMappedTrackInfo();
                 if (mappedTrackInfo == null) return;
 
