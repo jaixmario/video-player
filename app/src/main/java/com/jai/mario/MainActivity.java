@@ -20,6 +20,7 @@ import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo;
 import androidx.media3.ui.PlayerView;
+import androidx.media3.exoplayer.DefaultRenderersFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,8 +48,11 @@ public class MainActivity extends AppCompatActivity {
         playerView = findViewById(R.id.player_view);
 
         trackSelector = new DefaultTrackSelector(this);
+
         player = new ExoPlayer.Builder(this)
                 .setTrackSelector(trackSelector)
+                .setRenderersFactory(new DefaultRenderersFactory(this)
+                        .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER))
                 .build();
 
         playerView.setPlayer(player);

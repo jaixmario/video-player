@@ -10,7 +10,13 @@
         android:id="@+id/video_url_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter video URL (e.g., MKV)" />
+        android:hint="Enter video URL (e.g., MKV)"
+        android:inputType="textUri"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:scrollHorizontally="true"
+        android:maxLines="1"
+        android:textIsSelectable="true" />
 
     <Button
         android:id="@+id/play_button"
