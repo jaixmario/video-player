@@ -16,6 +16,7 @@ import org.videolan.libvlc.MediaPlayer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
 
