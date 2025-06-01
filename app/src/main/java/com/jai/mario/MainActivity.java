@@ -1,41 +1,31 @@
-package com.jai.mario;
+package com.jai.vlcplayer;
 
 import android.app.AlertDialog;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.SurfaceView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.media3.common.C;
-import androidx.media3.common.MediaItem;
-import androidx.media3.common.MimeTypes;
-import androidx.media3.common.Player;
-import androidx.media3.common.TrackGroup;
-import androidx.media3.common.TrackSelectionOverride;
-import androidx.media3.common.TrackSelectionParameters;
-import androidx.media3.common.Tracks;
-import androidx.media3.exoplayer.ExoPlayer;
-import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
-import androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo;
-import androidx.media3.ui.PlayerView;
-import androidx.media3.exoplayer.DefaultRenderersFactory;
+
+import org.videolan.libvlc.LibVLC;
+import org.videolan.libvlc.Media;
+import org.videolan.libvlc.MediaPlayer;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private ExoPlayer player;
-    private PlayerView playerView;
+    private SurfaceView surfaceView;
+    private LibVLC libVLC;
+    private MediaPlayer mediaPlayer;
     private EditText videoUrlInput;
-    private Button playButton;
-    private Button selectAudioButton;
+    private Button playButton, selectAudioButton;
 
-    private DefaultTrackSelector trackSelector;
-    private List<TrackGroup> audioTrackGroups = new ArrayList<>();
-    private int audioRendererIndex = -1;
+    private List<MediaPlayer.TrackDescription> audioTracks = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,100 +35,73 @@ public class MainActivity extends AppCompatActivity {
         videoUrlInput = findViewById(R.id.video_url_input);
         playButton = findViewById(R.id.play_button);
         selectAudioButton = findViewById(R.id.select_audio_button);
-        playerView = findViewById(R.id.player_view);
+        surfaceView = findViewById(R.id.surface_view);
 
-        trackSelector = new DefaultTrackSelector(this);
+        ArrayList<String> options = new ArrayList<>();
+        options.add("--no-drop-late-frames");
+        options.add("--no-skip-frames");
+        libVLC = new LibVLC(this, options);
 
-        player = new ExoPlayer.Builder(this)
-                .setTrackSelector(trackSelector)
-                .setRenderersFactory(new DefaultRenderersFactory(this)
-                        .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER))
-                .build();
-
-        playerView.setPlayer(player);
+        mediaPlayer = new MediaPlayer(libVLC);
+        mediaPlayer.getVLCVout().setVideoView(surfaceView);
+        mediaPlayer.getVLCVout().attachViews();
 
         playButton.setOnClickListener(v -> {
             String url = videoUrlInput.getText().toString().trim();
             if (!url.isEmpty()) {
-                playVideo(url);
+                playNetworkStream(url);
             } else {
                 Toast.makeText(this, "Please enter a video URL", Toast.LENGTH_SHORT).show();
             }
         });
 
-        selectAudioButton.setOnClickListener(v -> showAudioSelectionDialog());
+        selectAudioButton.setOnClickListener(v -> showAudioTrackDialog());
     }
 
-    private void playVideo(String videoUrl) {
-        player.stop();
+    private void playNetworkStream(String url) {
+        mediaPlayer.stop();
 
-        MediaItem mediaItem = new MediaItem.Builder()
-                .setUri(Uri.parse(videoUrl))
-                .setMimeType(MimeTypes.APPLICATION_MATROSKA)
-                .build();
+        Media media = new Media(libVLC, Uri.parse(url));
+        media.setHWDecoderEnabled(true, false);
+        media.addOption(":network-caching=200");
+        mediaPlayer.setMedia(media);
+        media.release();
 
-        player.setMediaItem(mediaItem);
-        player.prepare();
+        mediaPlayer.play();
 
-        player.addListener(new Player.Listener() {
-            @Override
-            public void onTracksChanged(Tracks tracks) {
-                MappedTrackInfo mappedTrackInfo = trackSelector.getCurrentMappedTrackInfo();
-                if (mappedTrackInfo == null) return;
-
-                audioTrackGroups.clear();
-
-                for (int rendererIndex = 0; rendererIndex < mappedTrackInfo.getRendererCount(); rendererIndex++) {
-                    if (mappedTrackInfo.getRendererType(rendererIndex) == C.TRACK_TYPE_AUDIO) {
-                        audioRendererIndex = rendererIndex;
-                        for (int groupIndex = 0; groupIndex < mappedTrackInfo.getTrackGroups(rendererIndex).length; groupIndex++) {
-                            audioTrackGroups.add(mappedTrackInfo.getTrackGroups(rendererIndex).get(groupIndex));
-                        }
-                    }
-                }
-            }
-        });
-
-        player.play();
+        surfaceView.postDelayed(() -> {
+            audioTracks = mediaPlayer.getAudioTracks();
+            Toast.makeText(this, "Found " + audioTracks.size() + " audio tracks", Toast.LENGTH_SHORT).show();
+        }, 1500);
     }
 
-    private void showAudioSelectionDialog() {
-        if (audioTrackGroups.isEmpty()) {
+    private void showAudioTrackDialog() {
+        if (audioTracks == null || audioTracks.isEmpty()) {
             Toast.makeText(this, "No audio tracks available", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String[] items = new String[audioTrackGroups.size()];
-        for (int i = 0; i < audioTrackGroups.size(); i++) {
-            String lang = audioTrackGroups.get(i).getFormat(0).language;
-            String mime = audioTrackGroups.get(i).getFormat(0).sampleMimeType;
-            items[i] = (lang != null ? lang : "Track " + (i + 1)) + " (" + mime + ")";
+        String[] items = new String[audioTracks.size()];
+        for (int i = 0; i < audioTracks.size(); i++) {
+            MediaPlayer.TrackDescription desc = audioTracks.get(i);
+            items[i] = desc.name != null ? desc.name : "Track " + desc.id;
         }
 
         new AlertDialog.Builder(this)
-                .setTitle("Select Audio Track")
-                .setItems(items, (dialog, index) -> {
-                    TrackGroup group = audioTrackGroups.get(index);
-                    TrackSelectionOverride override = new TrackSelectionOverride(group, List.of(0));
-
-                    TrackSelectionParameters parameters = trackSelector.getParameters()
-                            .buildUpon()
-                            .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
-                            .addOverride(override)
-                            .build();
-
-                    trackSelector.setParameters(parameters);
-                    Toast.makeText(this, "Selected: " + items[index], Toast.LENGTH_SHORT).show();
-                })
-                .show();
+            .setTitle("Select Audio Track")
+            .setItems(items, (dialog, which) -> {
+                int trackId = audioTracks.get(which).id;
+                mediaPlayer.setAudioTrack(trackId);
+                Toast.makeText(this, "Switched to: " + items[which], Toast.LENGTH_SHORT).show();
+            })
+            .show();
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        if (player != null) {
-            player.release();
-            player = null;
-        }
+    protected void onDestroy() {
+        super.onDestroy();
+        mediaPlayer.stop();
+        mediaPlayer.release();
+        libVLC.release();
     }
 }

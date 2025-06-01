@@ -1,22 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:padding="16dp">
 
     <EditText
         android:id="@+id/video_url_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter video URL (e.g., MKV)"
+        android:hint="Enter video URL"
         android:inputType="textUri"
         android:singleLine="true"
         android:ellipsize="end"
-        android:scrollHorizontally="true"
-        android:maxLines="1"
-        android:textIsSelectable="true" />
+        android:scrollHorizontally="true" />
 
     <Button
         android:id="@+id/play_button"
@@ -30,11 +27,9 @@
         android:layout_height="wrap_content"
         android:text="Select Audio Track" />
 
-    <androidx.media3.ui.PlayerView
-        android:id="@+id/player_view"
+    <SurfaceView
+        android:id="@+id/surface_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="16dp"
-        android:keepScreenOn="true" />
+        android:layout_weight="1"/>
 </LinearLayout>
