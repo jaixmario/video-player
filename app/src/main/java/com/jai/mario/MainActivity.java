@@ -13,10 +13,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
+import org.videolan.libvlc.MediaPlayer.TrackDescription;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText videoUrlInput;
     private Button playButton, selectAudioButton;
 
-    private List<MediaPlayer.TrackDescription> audioTracks = new ArrayList<>();
+    private List<TrackDescription> audioTracks = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,7 +72,8 @@ public class MainActivity extends AppCompatActivity {
         mediaPlayer.play();
 
         surfaceView.postDelayed(() -> {
-            audioTracks = mediaPlayer.getAudioTracks();
+            TrackDescription[] tracks = mediaPlayer.getAudioTracks();
+            audioTracks = (tracks != null) ? Arrays.asList(tracks) : new ArrayList<>();
             Toast.makeText(this, "Found " + audioTracks.size() + " audio tracks", Toast.LENGTH_SHORT).show();
         }, 1500);
     }
@@ -84,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
 
         String[] items = new String[audioTracks.size()];
         for (int i = 0; i < audioTracks.size(); i++) {
-            MediaPlayer.TrackDescription desc = audioTracks.get(i);
+            TrackDescription desc = audioTracks.get(i);
             items[i] = desc.name != null ? desc.name : "Track " + desc.id;
         }
 
