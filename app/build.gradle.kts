@@ -73,6 +73,9 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
+    // Material Components dependency
+    implementation("com.google.android.material:material:1.11.0")
+
     // ExoPlayer dependencies
     implementation("androidx.media3:media3-exoplayer:1.2.1")
     implementation("androidx.media3:media3-ui:1.2.1")
