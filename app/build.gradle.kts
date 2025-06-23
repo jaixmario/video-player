@@ -76,6 +76,9 @@ dependencies {
     // Material Components dependency
     implementation("com.google.android.material:material:1.11.0")
 
+    // ConstraintLayout dependency
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+
     // ExoPlayer dependencies
     implementation("androidx.media3:media3-exoplayer:1.2.1")
     implementation("androidx.media3:media3-ui:1.2.1")
